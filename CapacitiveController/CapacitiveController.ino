@@ -1,6 +1,6 @@
 
 //Nota 1
-//Utilizzare un STM32 dotato di compatibile con il pin no-grounding 
+//Utilizzare un STM32 dotato di pin no-grounding 
 #define ADCTOUCH_INTERNAL_GROUNDING
 
 /*
@@ -10,7 +10,7 @@ Nel mio PC è stato necessario eseguire questa modifica
 Nel file 
 C:\Users\maurizio\AppData\Local\Arduino15\packages\STMicroelectronics\hardware\stm32\2.7.1\system\Middlewares\ST\STM32_USB_Device_Library\Class\HID\Inc\usbd_hid.h
 
-ho cambiato il valore della define
+ho cambiato il valore della seguente #define
 #define HID_MOUSE_REPORT_DESC_SIZE 63U
 
 da 74U
