@@ -12,3 +12,5 @@ https://a360.co/3UZMSfV
 ![image](https://github.com/fablabromagna-org/toucher/assets/249618/b7eb5445-5e70-4458-81dc-d9276e218794)
 
 Un esempio di HID Mouse per STM32
+
+https://github.com/arpruss/USBComposite_stm32f1/blob/master/examples/absmouse/absmouse.ino
