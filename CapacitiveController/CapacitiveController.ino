@@ -28,7 +28,7 @@
 #define QUANTI_PIEDINI  10
 ADCTouchSensor* capacitiveInput[QUANTI_PIEDINI];
 
-// Libreria USBComposite di STM32Duino
+// Libreria USBHID (by Varius)
 // https://github.com/arpruss/USBComposite_stm32f1/tree/master
 #include <USBComposite.h>
 
