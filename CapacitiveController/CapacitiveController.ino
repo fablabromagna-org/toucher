@@ -6,6 +6,11 @@
 // 25 maggio 2024
 //
 
+// Riferimenti alle board utilizzate nell'IDE di Arduino
+// http://dan.drown.org/stm32duino/package_STM32duino_index.json
+// https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
+// https://github.com/stm32duino/BoardManagerFiles/raw/main/package_stmicroelectronics_index.json
+
 /// Nota //////////////////////////////
 // Utilizzare un STM32 dotato di compatibile con il pin no-grounding 
 #define ADCTOUCH_INTERNAL_GROUNDING
