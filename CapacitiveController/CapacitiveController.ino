@@ -30,7 +30,7 @@
 // Libreria ADCTouchSensor
 // https://github.com/arpruss/ADCTouchSensor
 #include <ADCTouchSensor.h>                                  
-#define QUANTI_PIEDINI  10
+#define QUANTI_PIEDINI  8
 ADCTouchSensor* capacitiveInput[QUANTI_PIEDINI];
 
 // Libreria USBHID (by Varius)
@@ -46,7 +46,7 @@ USBCompositeSerial CompositeSerial;
 #define LED_BUILTIN PB12 // Il led a bordo
 #define LED1 PB13        // Il mio led esterno
 #define P1 PB14          // Il mio pulsante
-#define THRESOLD 30      // Il valore minimo di trigger
+#define THRESOLD 20      // Il valore minimo di trigger
 
 // Solo i PIN Analogici possono essere trasformati in ingressi touch capacitivi
 unsigned pins[] = { PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PB0, PB1 };
@@ -64,7 +64,7 @@ bool isMidiOn = false;
 
 void taraturaAnalogica() {
     for (int idx=0; idx<QUANTI_PIEDINI; idx++) {
-        if( capacitiveInput[idx] )  // Teniamo d'occhio i memory leacks... non siamo in C#!!!
+        if( capacitiveInput[idx] )  // Teniamo d'occhio i memory leaks... non siamo in C#!!!
           delete capacitiveInput[idx];
 
         capacitiveInput[idx] = new ADCTouchSensor(pins[idx]);
@@ -94,12 +94,18 @@ void blinkLed()
 void gestioneTastieraMouseSeriale() {
 
     for (int idx=0; idx<QUANTI_PIEDINI; idx++) {
-      CompositeSerial.print( capacitiveInput[idx]->read() );
-      CompositeSerial.print( "\t" );
+      int val = capacitiveInput[idx]->read();
+      if( val < 0)
+          val = 0;
 
-      if (capacitiveInput[idx]->read() > THRESOLD) {
+      CompositeSerial.print( val );
+
+      if (val > THRESOLD) {
         LedOn();
+        delay(40);
+        CompositeSerial.print( "*\t" );
 
+/*
         if ( idx==9 ) {
           // Il decimo è il click del mouse
           Mouse.press(MOUSE_LEFT);
@@ -113,9 +119,12 @@ void gestioneTastieraMouseSeriale() {
          Keyboard.release(tastiera[idx]);
          delay(20);
         }
-
+*/
         LedOff();
       }
+      else
+        CompositeSerial.print( "\t" );
+
     }
 
     CompositeSerial.println( "-" );
