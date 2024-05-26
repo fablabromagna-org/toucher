@@ -1,50 +1,67 @@
+//
+// Touch-ER
+// Un'interfaccia simile a Makey Makey basata su Blue Pill
+//
+// conti@istruzioneer.gov.it - maurizio.conti@fablabromagna.org
+// 25 maggio 2024
+//
 
-//Nota 1
-//Utilizzare un STM32 dotato di compatibile con il pin no-grounding 
+
+/// Nota //////////////////////////////
+// Utilizzare un STM32 dotato di compatibile con il pin no-grounding 
 #define ADCTOUCH_INTERNAL_GROUNDING
 
-/*
-Nota 2
-Nel mio PC è stato necessario eseguire questa modifica
+// Nota //////////////////////////////
+// Nel mio PC è stato necessario modificare il file 
+// C:\Users\maurizio\AppData\Local\Arduino15\packages\STMicroelectronics\hardware\stm32\2.7.1\system\Middlewares\ST\STM32_USB_Device_Library\Class\HID\Inc\usbd_hid.h
+// 
+// ho cambiato il valore della #define HID_MOUSE_REPORT_DESC_SIZE
+// dal valore 74U al valore 63U
+ 
+// Nota //////////////////////////////
+// La velocità in Mhz della scheda va settata su "Normal" 72MHz
+// Su Arduino IDE 1.8.15  il default è 72MHz
+// Su Arduino IDE 2       il default è 48MHz
 
-Nel file 
-C:\Users\maurizio\AppData\Local\Arduino15\packages\STMicroelectronics\hardware\stm32\2.7.1\system\Middlewares\ST\STM32_USB_Device_Library\Class\HID\Inc\usbd_hid.h
-
-ho cambiato il valore della define
-#define HID_MOUSE_REPORT_DESC_SIZE 63U
-
-da 74U
-a 63U
-
-La velocità in Mhz della scheda va settata su "Normal" 72MHz
-Su Arduino IDE 1.8.15  il default è 72MHz
-Su Arduino IDE 2       il default è 48MHz
-
-*/
-
-// Dagli esempi della libreria USBComposite di STM32Duino
+// Libreria ADCTouchSensor
+// https://github.com/arpruss/ADCTouchSensor
 #include <ADCTouchSensor.h>                                  
-#include <USBComposite.h> 
-                                                                                                                                                                                   
-USBHID HID;
-HIDKeyboard Keyboard(HID);
-HIDMouse Mouse(HID);
+#define QUANTI_PIEDINI  10
+ADCTouchSensor* capacitiveInput[QUANTI_PIEDINI];
+
+// Libreria USBComposite di STM32Duino
+// https://github.com/arpruss/USBComposite_stm32f1/tree/master
+#include <USBComposite.h>
+
+USBHID HID;                              // Istanzia un plugin USBHID
+HIDKeyboard Keyboard(HID);               // crea tutte le istanze dei profili
+HIDMouse Mouse(HID);                     // in setup, faremo HID.begin() per far partire tutto
+USBMIDI midi;
 USBCompositeSerial CompositeSerial;
 
 #define LED_BUILTIN PB12 // Il led a bordo
 #define LED1 PB13        // Il mio led esterno
 #define P1 PB14          // Il mio pulsante
 
-#define QUANTI_PIEDINI  10
-unsigned pins[QUANTI_PIEDINI] = {PA0,PA1,PA2,PA3,PA4,PA5,PA6,PA7,PB0,PB1};
+// Solo i PIN Analogici possono essere trasformati in ingressi touch capacitivi
+unsigned pins[] = { PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PB0, PB1 };
 
-unsigned tastiera[QUANTI_PIEDINI] = { KEY_RIGHT_ARROW, 'w', KEY_LEFT_ARROW, 'a', KEY_UP_ARROW, 's', ' ', KEY_DOWN_ARROW, 'd', '.' }; 
-//unsigned tastiera[QUANTI_PIEDINI] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'l'};
- 
-ADCTouchSensor* capacitiveInput[QUANTI_PIEDINI];
+// i tasti che vengono generati non sono ordinati per esigenze di cablaggio (ho attaccato i fili come mi rimaneva più comodo per saldarli)
+unsigned tastiera[] = { KEY_RIGHT_ARROW, 'w', KEY_LEFT_ARROW, 'a', KEY_UP_ARROW, 's', ' ', KEY_DOWN_ARROW, 'd', '.' }; 
+
+// le note MIDI suonate
+//                              C   D   E   F   G   A   B   C   C#  D#  F#  G#  A#
+const uint8_t tastieraMidi[] = {60, 62, 64, 65, 67, 69, 71, 72, 61, 63, 66, 68, 70};
+bool statoMidi[QUANTI_PIEDINI];
+
+// Determina se usiamo la seriale o il midi
+bool isMidiOn = false;
 
 void taraturaAnalogica() {
     for (int idx=0; idx<QUANTI_PIEDINI; idx++) {
+        if( capacitiveInput[idx] )  // Teniamo d'occhio i memory leacks... non siamo in C#!!!
+          delete capacitiveInput[idx];
+
         capacitiveInput[idx] = new ADCTouchSensor(pins[idx]);
         capacitiveInput[idx]->begin();
     }
@@ -69,46 +86,15 @@ void blinkLed()
   delay( 200 );
 }
 
+void gestioneTastieraMouseSeriale() {
 
-void setup() 
-{
-    // Si assicura che l'uscita sia off prima di configurarla
-    LedOff();    
-    pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(LED1, OUTPUT);
-
-	  // Accende la porta USB, e aspetta un esito OK
-    HID.begin(CompositeSerial);
-    while (!USBComposite)
-      ;
-      
-    Keyboard.begin(); 
-    blinkLed();
-    Mouse.begin(); 
-    blinkLed();
-
-    delay( 500 );
-
-    pinMode(P1, INPUT_PULLUP);
-    while( digitalRead( P1 ) ) {
-      LedOn();
-    }
-    taraturaAnalogica();
-
-    LedOff();    
- } 
-
-
-void loop() 
-{
-    uint8_t pressedIndicator = 0;
-    
     for (int idx=0; idx<QUANTI_PIEDINI; idx++) {
       CompositeSerial.print( capacitiveInput[idx]->read() );
       CompositeSerial.print( "\t" );
 
       if (capacitiveInput[idx]->read() > 50) {
         LedOn();
+
         if ( idx==9 ) {
           // Il decimo è il click del mouse
           Mouse.press(MOUSE_LEFT);
@@ -122,20 +108,111 @@ void loop()
          Keyboard.release(tastiera[idx]);
          delay(20);
         }
+
         LedOff();
       }
     }
 
     CompositeSerial.println( "-" );
     delay(100);
+}
 
-    if( !digitalRead(P1) ){
-      while( !digitalRead(P1) )
-      ;
+void gestioneMidi() {
+  for (int idx=0; idx<QUANTI_PIEDINI; idx++) {
+    if (capacitiveInput[idx]->read() > 50) {
+      if( !statoMidi[idx] ) {
+        statoMidi[idx]=true;
+        LedOn();
+        midi.sendNoteOn(0, tastieraMidi[idx], 127);
+      }
+    }
+    else
+    {
+      if( statoMidi[idx] ) {
+       statoMidi[idx]=false;
+       midi.sendNoteOff(0, tastieraMidi[idx], 0);
+       LedOff();
+      }
+    }
+  }
+}
 
-      taraturaAnalogica();     
+void setup() 
+{
+    // I miei PIN
+    pinMode( LED_BUILTIN, OUTPUT );
+    pinMode( LED1, OUTPUT );
+    pinMode( P1, INPUT_PULLUP );
+
+    if( !digitalRead(P1) )
+    {
+      while( !digitalRead(P1) );
+      
+      // Usiamo midi
+      isMidiOn = true;
+      midi.begin(); 
+      
+      blinkLed();
+    }
+    else {
+      // Usiamo seriale
+      isMidiOn = false;
+
+      Keyboard.begin(); 
+      blinkLed();
+      Mouse.begin(); 
+      blinkLed();
+
+      HID.begin(CompositeSerial);
+      while (!USBComposite) ;
+      blinkLed();
+    }
+        
+
+    // Accendo il midi  
+    //midi.begin();
+    //blinkLed();
+    //HID.begin(CompositeSerial);
+    //while (!USBComposite) ;
+    //blinkLed();
+
+    // Accendo Tastiera e mouse
+    //Keyboard.begin(); 
+    //blinkLed();
+    //Mouse.begin(); 
+    //HID.registerComponent();
+
+
+    // Si assicura che l'uscita sia off prima di configurarla
+    LedOff();    
+
+    delay( 500 );
+
+    while( digitalRead( P1 ) ) {
       LedOn();
-      delay(500);
-      LedOff();
+    }
+    taraturaAnalogica();
+
+    LedOff();    
+ } 
+
+
+void loop() 
+{
+    uint8_t pressedIndicator = 0;
+    
+    if( isMidiOn )
+    {
+      gestioneMidi();
+    }
+    else
+    {
+      gestioneTastieraMouseSeriale();
+    }
+
+    if( !digitalRead(P1) ) {
+      while( !digitalRead(P1) ) ;
+      taraturaAnalogica();     
+      blinkLed();
     }
 }
