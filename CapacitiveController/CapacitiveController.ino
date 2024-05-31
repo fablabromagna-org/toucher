@@ -105,7 +105,7 @@ void gestioneTastieraMouseSeriale() {
         delay(40);
         CompositeSerial.print( "*\t" );
 
-/*
+
         if ( idx==9 ) {
           // Il decimo è il click del mouse
           Mouse.press(MOUSE_LEFT);
@@ -119,7 +119,6 @@ void gestioneTastieraMouseSeriale() {
          Keyboard.release(tastiera[idx]);
          delay(20);
         }
-*/
         LedOff();
       }
       else
