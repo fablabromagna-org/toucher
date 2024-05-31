@@ -46,7 +46,7 @@ USBCompositeSerial CompositeSerial;
 #define LED_BUILTIN PB12 // Il led a bordo
 #define LED1 PB13        // Il mio led esterno
 #define P1 PB14          // Il mio pulsante
-#define THRESOLD 20      // Il valore minimo di trigger
+#define THRESHOLD 20      // Il valore minimo di trigger
 
 // Solo i PIN Analogici possono essere trasformati in ingressi touch capacitivi
 unsigned pins[] = { PA0, PA1, PA2, PA3, PA4, PA5, PA6, PA7, PB0, PB1 };
@@ -100,7 +100,7 @@ void gestioneTastieraMouseSeriale() {
 
       CompositeSerial.print( val );
 
-      if (val > THRESOLD) {
+      if (val > THRESHOLD) {
         LedOn();
         delay(40);
         CompositeSerial.print( "*\t" );
@@ -132,7 +132,7 @@ void gestioneTastieraMouseSeriale() {
 
 void gestioneMidi() {
   for (int idx=0; idx<QUANTI_PIEDINI; idx++) {
-    if (capacitiveInput[idx]->read() > THRESOLD) {
+    if (capacitiveInput[idx]->read() > THRESHOLD) {
       if( !statoMidi[idx] ) {
         statoMidi[idx]=true;
         LedOn();
