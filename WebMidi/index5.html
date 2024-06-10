@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tastiera Pianoforte MIDI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #282c34;
+            color: #61dafb;
+        }
+        h1 {
+            color: #61dafb;
+        }
+        #keyboard {
+            display: flex;
+            flex-direction: row;
+            margin-top: 20px;
+        }
+        .key {
+            width: 40px;
+            height: 200px;
+            border: 1px solid #000;
+            background-color: #fff;
+            margin: 1px;
+            position: relative;
+        }
+        .black-key {
+            width: 30px;
+            height: 120px;
+            background-color: #000;
+            margin: 1px;
+            position: absolute;
+            left: 30px;
+            top: 0;
+        }
+        .key.active {
+            background-color: #ffeb3b;
+        }
+        .black-key.active {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tastiera Pianoforte MIDI</h1>
+    <p>Collega la tua tastiera MIDI tramite USB per vedere le note premute.</p>
+    <div id="keyboard"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const keyboard = document.getElementById('keyboard');
+            const noteToKey = {};
+
+            const notes = [
+                { note: 'C', octave: 4, midi: 60 },
+                { note: 'C#', octave: 4, midi: 61 },
+                { note: 'D', octave: 4, midi: 62 },
+                { note: 'D#', octave: 4, midi: 63 },
+                { note: 'E', octave: 4, midi: 64 },
+                { note: 'F', octave: 4, midi: 65 },
+                { note: 'F#', octave: 4, midi: 66 },
+                { note: 'G', octave: 4, midi: 67 },
+                { note: 'G#', octave: 4, midi: 68 },
+                { note: 'A', octave: 4, midi: 69 },
+                { note: 'A#', octave: 4, midi: 70 },
+                { note: 'B', octave: 4, midi: 71 }
+            ];
+
+            notes.forEach((item) => {
+                const key = document.createElement('div');
+                key.className = 'key';
+                if (item.note.includes('#')) {
+                    key.className += ' black-key';
+                    key.style.left = `${notes.indexOf(item) * 40 - 10}px`;
+                } else {
+                    key.style.left = `${notes.indexOf(item) * 40}px`;
+                }
+                key.dataset.note = `${item.note}${item.octave}`;
+                keyboard.appendChild(key);
+                noteToKey[item.midi] = key;
+            });
+
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            } else {
+                alert("Web MIDI API non è supportata nel tuo browser.");
+            }
+
+            function onMIDISuccess(midiAccess) {
+                const inputs = midiAccess.inputs.values();
+                for (let input of inputs) {
+                    input.onmidimessage = handleMIDIMessage;
+                }
+            }
+
+            function onMIDIFailure() {
+                alert("Impossibile accedere ai dispositivi MIDI.");
+            }
+
+            function handleMIDIMessage(message) {
+                const data = message.data;
+                const command = data[0] & 0xf0;
+                const note = data[1];
+                const velocity = data[2];
+
+                if (noteToKey[note]) {
+                    if (command === 144 && velocity > 0) { // Note On
+                        noteToKey[note].classList.add('active');
+                    } else if (command === 128 || (command === 144 && velocity === 0)) { // Note Off
+                        noteToKey[note].classList.remove('active');
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

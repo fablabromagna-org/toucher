@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizzatore di Eventi MIDI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        #events {
+            margin-top: 20px;
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .event {
+            padding: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        .event:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizzatore di Eventi MIDI</h1>
+    <p>Collega la tua tastiera MIDI tramite USB per vedere gli eventi MIDI.</p>
+    <div id="events"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            } else {
+                alert("Web MIDI API non è supportata nel tuo browser.");
+            }
+
+            function onMIDISuccess(midiAccess) {
+                const inputs = midiAccess.inputs.values();
+                for (let input of inputs) {
+                    input.onmidimessage = handleMIDIMessage;
+                }
+            }
+
+            function onMIDIFailure() {
+                alert("Impossibile accedere ai dispositivi MIDI.");
+            }
+
+            function handleMIDIMessage(message) {
+                const data = message.data;
+                const eventType = data[0] & 0xf0;
+                const channel = data[0] & 0x0f;
+                const note = data[1];
+                const velocity = data[2];
+                const timestamp = message.timeStamp;
+
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event';
+                eventDiv.textContent = `Tipo Evento: ${eventType}, Canale: ${channel}, Nota: ${note}, Velocità: ${velocity}, Timestamp: ${timestamp}`;
+                document.getElementById('events').appendChild(eventDiv);
+            }
+        });
+    </script>
+</body>
+</html>

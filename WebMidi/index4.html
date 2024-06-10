@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tastiera Pianoforte MIDI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #282c34;
+            color: #61dafb;
+        }
+        h1 {
+            color: #61dafb;
+        }
+        #keyboard {
+            display: flex;
+            flex-direction: row;
+            margin-top: 20px;
+        }
+        .key {
+            width: 40px;
+            height: 200px;
+            border: 1px solid #000;
+            background-color: #fff;
+            margin: 1px;
+            position: relative;
+        }
+        .black-key {
+            width: 30px;
+            height: 120px;
+            background-color: #000;
+            margin: 1px;
+            position: absolute;
+            left: 30px;
+            top: 0;
+        }
+        .key.active {
+            background-color: #ffeb3b;
+        }
+        .black-key.active {
+            background-color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tastiera Pianoforte MIDI</h1>
+    <p>Collega la tua tastiera MIDI tramite USB per vedere le note premute.</p>
+    <div id="keyboard"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const keyboard = document.getElementById('keyboard');
+            const noteToKey = {};
+
+            const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+            const blackKeys = ['C#', 'D#', 'F#', 'G#', 'A#'];
+
+            for (let i = 0; i < 7; i++) {
+                whiteKeys.forEach((note, index) => {
+                    const key = document.createElement('div');
+                    key.className = 'key';
+                    key.dataset.note = `${note}${i}`;
+                    keyboard.appendChild(key);
+                    noteToKey[`${note}${i}`] = key;
+
+                    if (blackKeys.includes(note + '#')) {
+                        const blackKey = document.createElement('div');
+                        blackKey.className = 'black-key';
+                        blackKey.dataset.note = `${note}#${i}`;
+                        key.appendChild(blackKey);
+                        noteToKey[`${note}#${i}`] = blackKey;
+                    }
+                });
+            }
+
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            } else {
+                alert("Web MIDI API non è supportata nel tuo browser.");
+            }
+
+            function onMIDISuccess(midiAccess) {
+                const inputs = midiAccess.inputs.values();
+                for (let input of inputs) {
+                    input.onmidimessage = handleMIDIMessage;
+                }
+            }
+
+            function onMIDIFailure() {
+                alert("Impossibile accedere ai dispositivi MIDI.");
+            }
+
+            function handleMIDIMessage(message) {
+                const data = message.data;
+                const command = data[0] & 0xf0;
+                const note = data[1];
+                const velocity = data[2];
+
+                const noteName = getNoteName(note);
+
+                if (command === 144 && velocity > 0) { // Note On
+                    if (noteToKey[noteName]) {
+                        noteToKey[noteName].classList.add('active');
+                    }
+                } else if (command === 128 || (command === 144 && velocity === 0)) { // Note Off
+                    if (noteToKey[noteName]) {
+                        noteToKey[noteName].classList.remove('active');
+                    }
+                }
+            }
+
+            function getNoteName(noteNumber) {
+                const octave = Math.floor(noteNumber / 12) - 1;
+                const noteIndex = noteNumber % 12;
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                return noteNames[noteIndex] + octave;
+            }
+        });
+    </script>
+</body>
+</html>

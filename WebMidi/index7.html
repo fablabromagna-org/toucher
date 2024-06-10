@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tastiera Pianoforte MIDI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #282c34;
+            color: #61dafb;
+        }
+        h1 {
+            color: #61dafb;
+        }
+        #keyboard {
+            display: grid;
+            grid-template-columns: repeat(7, 40px);
+            grid-template-rows: 200px;
+            position: relative;
+            margin-top: 20px;
+        }
+        .key {
+            width: 40px;
+            height: 200px;
+            border: 1px solid #000;
+            background-color: #fff;
+            margin: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        .black-key {
+            width: 30px;
+            height: 120px;
+            background-color: #000;
+            position: absolute;
+            z-index: 2;
+        }
+        .key.active {
+            background-color: #ffeb3b;
+        }
+        .black-key.active {
+            background-color: #f44336;
+        }
+        /* Posizionamento specifico dei tasti neri */
+        .black-key[data-note="C#4"] {
+            left: 25px;
+        }
+        .black-key[data-note="D#4"] {
+            left: 65px;
+        }
+        .black-key[data-note="F#4"] {
+            left: 145px;
+        }
+        .black-key[data-note="G#4"] {
+            left: 185px;
+        }
+        .black-key[data-note="A#4"] {
+            left: 225px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tastiera Pianoforte MIDI</h1>
+    <p>Collega la tua tastiera MIDI tramite USB per vedere le note premute e ascoltarle.</p>
+    <div id="keyboard">
+        <div class="key" data-note="C4"></div>
+        <div class="key" data-note="D4"></div>
+        <div class="key" data-note="E4"></div>
+        <div class="key" data-note="F4"></div>
+        <div class="key" data-note="G4"></div>
+        <div class="key" data-note="A4"></div>
+        <div class="key" data-note="B4"></div>
+        <div class="black-key" data-note="C#4"></div>
+        <div class="black-key" data-note="D#4"></div>
+        <div class="black-key" data-note="F#4"></div>
+        <div class="black-key" data-note="G#4"></div>
+        <div class="black-key" data-note="A#4"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const noteToKey = {};
+            const oscillators = {};
+
+            document.querySelectorAll('.key, .black-key').forEach(key => {
+                noteToKey[key.dataset.note] = key;
+            });
+
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            } else {
+                alert("Web MIDI API non è supportata nel tuo browser.");
+            }
+
+            function onMIDISuccess(midiAccess) {
+                const inputs = midiAccess.inputs.values();
+                for (let input of inputs) {
+                    input.onmidimessage = handleMIDIMessage;
+                }
+            }
+
+            function onMIDIFailure() {
+                alert("Impossibile accedere ai dispositivi MIDI.");
+            }
+
+            function handleMIDIMessage(message) {
+                const data = message.data;
+                const command = data[0] & 0xf0;
+                const note = data[1];
+                const velocity = data[2];
+
+                const noteName = getNoteName(note);
+
+                if (noteToKey[noteName]) {
+                    if (command === 144 && velocity > 0) { // Note On
+                        noteToKey[noteName].classList.add('active');
+                        playNote(noteName);
+                    } else if (command === 128 || (command === 144 && velocity === 0)) { // Note Off
+                        noteToKey[noteName].classList.remove('active');
+                        stopNote(noteName);
+                    }
+                }
+            }
+
+            function getNoteName(noteNumber) {
+                const octave = Math.floor(noteNumber / 12) - 1;
+                const noteIndex = noteNumber % 12;
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                return noteNames[noteIndex] + octave;
+            }
+
+            function playNote(note) {
+                const freq = noteToFrequency(note);
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+
+                oscillator.start();
+                oscillators[note] = oscillator;
+            }
+
+            function stopNote(note) {
+                if (oscillators[note]) {
+                    oscillators[note].stop();
+                    delete oscillators[note];
+                }
+            }
+
+            function noteToFrequency(note) {
+                const noteFrequencies = {
+                    'C4': 261.63,
+                    'C#4': 277.18,
+                    'D4': 293.66,
+                    'D#4': 311.13,
+                    'E4': 329.63,
+                    'F4': 349.23,
+                    'F#4': 369.99,
+                    'G4': 392.00,
+                    'G#4': 415.30,
+                    'A4': 440.00,
+                    'A#4': 466.16,
+                    'B4': 493.88
+                };
+                return noteFrequencies[note];
+            }
+        });
+    </script>
+</body>
+</html>

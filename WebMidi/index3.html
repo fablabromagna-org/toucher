@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizzatore di Eventi MIDI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #282c34;
+            color: #61dafb;
+        }
+        h1 {
+            color: #61dafb;
+        }
+        #events-container {
+            margin-top: 20px;
+            width: 80%;
+            max-width: 800px;
+            background-color: #20232a;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        #events {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .event {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+        }
+        .event:last-child {
+            border-bottom: none;
+        }
+        .event div {
+            margin: 0 5px;
+        }
+        .event div:first-child {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizzatore di Eventi MIDI</h1>
+    <p>Collega la tua tastiera MIDI tramite USB per vedere gli eventi MIDI.</p>
+    <div id="events-container">
+        <div id="events"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (navigator.requestMIDIAccess) {
+                navigator.requestMIDIAccess({ sysex: false }).then(onMIDISuccess, onMIDIFailure);
+            } else {
+                alert("Web MIDI API non è supportata nel tuo browser.");
+            }
+
+            function onMIDISuccess(midiAccess) {
+                const inputs = midiAccess.inputs.values();
+                for (let input of inputs) {
+                    input.onmidimessage = handleMIDIMessage;
+                }
+            }
+
+            function onMIDIFailure() {
+                alert("Impossibile accedere ai dispositivi MIDI.");
+            }
+
+            function handleMIDIMessage(message) {
+                const data = message.data;
+                const eventType = data[0] & 0xf0;
+                const channel = data[0] & 0x0f;
+                const note = data[1];
+                const velocity = data[2];
+                const timestamp = message.timeStamp;
+
+                const eventDiv = document.createElement('div');
+                eventDiv.className = 'event';
+                eventDiv.innerHTML = `
+                    <div><strong>Tipo Evento:</strong> ${eventType}</div>
+                    <div><strong>Canale:</strong> ${channel}</div>
+                    <div><strong>Nota:</strong> ${note}</div>
+                    <div><strong>Velocità:</strong> ${velocity}</div>
+                    <div><strong>Timestamp:</strong> ${timestamp.toFixed(2)}</div>
+                `;
+                document.getElementById('events').appendChild(eventDiv);
+            }
+        });
+    </script>
+</body>
+</html>
